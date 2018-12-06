@@ -61,6 +61,7 @@ import de.schildbach.wallet.ui.send.SweepWalletActivity;
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.Crypto;
+import de.schildbach.wallet.util.FingerprintHelper;
 import de.schildbach.wallet.util.Io;
 import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet.util.WalletUtils;
@@ -85,6 +86,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.support.annotation.RequiresApi;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
 import android.support.v4.app.ActivityCompat;
@@ -115,7 +117,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
         implements ActivityCompat.OnRequestPermissionsResultCallback,
         NavigationView.OnNavigationItemSelectedListener,
         WalletLock.OnLockChangeListener, UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,
-        EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener {
+        EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener,
+        EnableFingerprintDialog.OnFingerprintEnabledListener {
     private static final int DIALOG_BACKUP_WALLET_PERMISSION = 0;
     private static final int DIALOG_RESTORE_WALLET_PERMISSION = 1;
     private static final int DIALOG_RESTORE_WALLET = 2;
@@ -126,6 +129,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private WalletApplication application;
     private Configuration config;
     private Wallet wallet;
+    private FingerprintHelper fingerprintHelper;
 
     private DrawerLayout viewDrawer;
     private View viewFakeForSafetySubmenu;
@@ -179,6 +183,14 @@ public final class WalletActivity extends AbstractBindServiceActivity
         if (savedInstanceState == null) {
             //Add BIP44 support and PIN if missing
             upgradeWalletKeyChains(Constants.BIP44_PATH, false);
+        }
+
+        //Init fingerprint helper
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            fingerprintHelper = new FingerprintHelper(this);
+            if (!fingerprintHelper.init()) {
+                fingerprintHelper = null;
+            }
         }
     }
 
@@ -411,7 +423,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 return true;
 
             case R.id.wallet_options_help:
-                HelpDialogFragment.page(getFragmentManager(), R.string.help_wallet);
+                HelpDialogFragment.page(getSupportFragmentManager(), R.string.help_wallet);
                 return true;
         }
 
@@ -434,7 +446,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         //Only allow to backup when wallet is unlocked
         final WalletLock walletLock = WalletLock.getInstance();
         if (WalletLock.getInstance().isWalletLocked(wallet)) {
-            UnlockWalletDialogFragment.show(getFragmentManager(), new DialogInterface.OnDismissListener() {
+            UnlockWalletDialogFragment.show(getSupportFragmentManager(), new DialogInterface.OnDismissListener() {
                 @Override
                 public void onDismiss(DialogInterface dialog) {
                     if (!walletLock.isWalletLocked(wallet)) {
@@ -475,11 +487,11 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     public void handleEncryptKeys() {
-        EncryptKeysDialogFragment.show(getFragmentManager());
+        EncryptKeysDialogFragment.show(getSupportFragmentManager());
     }
 
     public void handleEncryptKeysRestoredWallet() {
-        EncryptKeysDialogFragment.show(getFragmentManager(), new DialogInterface.OnDismissListener() {
+        EncryptKeysDialogFragment.show(getSupportFragmentManager(), new DialogInterface.OnDismissListener() {
             @Override
             public void onDismiss(DialogInterface dialog) {
                 resetBlockchain();
@@ -515,6 +527,11 @@ public final class WalletActivity extends AbstractBindServiceActivity
             }
         };
         dialog.show();
+    }
+
+    private void enableFingerprint() {
+        config.setRemindEnableFingerprint(true);
+        UnlockWalletDialogFragment.show(getSupportFragmentManager());
     }
 
     @Override
@@ -1045,6 +1062,9 @@ public final class WalletActivity extends AbstractBindServiceActivity
             menu.findItem(R.id.wallet_options_backup_wallet).setEnabled(Environment.MEDIA_MOUNTED.equals(externalStorageState));
             menu.findItem(R.id.wallet_options_encrypt_keys).setTitle(
                     wallet.isEncrypted() ? R.string.wallet_options_encrypt_keys_change : R.string.wallet_options_encrypt_keys_set);
+
+            boolean showFingerprintOption = fingerprintHelper != null && !fingerprintHelper.isFingerprintEnabled();
+            menu.findItem(R.id.wallet_options_enable_fingerprint).setVisible(showFingerprintOption);
         }
     }
 
@@ -1052,7 +1072,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     public boolean onContextItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.wallet_options_safety:
-                HelpDialogFragment.page(getFragmentManager(), R.string.help_safety);
+                HelpDialogFragment.page(getSupportFragmentManager(), R.string.help_safety);
                 return true;
 
             case R.id.wallet_options_backup_wallet:
@@ -1072,6 +1092,10 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
             case R.id.wallet_options_restore_wallet_from_seed:
                 handleRestoreWalletFromSeed();
+                return true;
+
+            case R.id.wallet_options_enable_fingerprint:
+                enableFingerprint();
                 return true;
         }
 
@@ -1138,7 +1162,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         isRestoringBackup = restoreBackup;
         if (!wallet.hasKeyChain(path)) {
             if (wallet.isEncrypted()) {
-                EncryptNewKeyChainDialogFragment.show(getFragmentManager(), path);
+                EncryptNewKeyChainDialogFragment.show(getSupportFragmentManager(), path);
             } else {
                 //
                 // Upgrade the wallet now
@@ -1251,6 +1275,17 @@ public final class WalletActivity extends AbstractBindServiceActivity
             }
         });
         dialogBuilder.show();
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.M)
+    @Override
+    public void onFingerprintEnabled() {
+        WalletTransactionsFragment walletTransactionsFragment = (WalletTransactionsFragment)
+                getSupportFragmentManager().findFragmentById(R.id.wallet_transactions_fragment);
+        if (walletTransactionsFragment != null) {
+            walletTransactionsFragment.initFingerprintHelper();
+            walletTransactionsFragment.onLockChanged(WalletLock.getInstance().isWalletLocked(wallet));
+        }
     }
 
 }

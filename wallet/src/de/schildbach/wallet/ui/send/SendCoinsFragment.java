@@ -43,7 +43,6 @@ import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionedChecksummedBytes;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
 import org.bitcoinj.uri.BitcoinURI;
-import org.bitcoinj.utils.Fiat;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.InstantXCoinSelector;
 import org.bitcoinj.wallet.KeyChain.KeyPurpose;
@@ -97,23 +96,21 @@ import de.schildbach.wallet.ui.UnlockWalletDialogFragment;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet.util.Bluetooth;
 import org.dash.wallet.common.util.MonetarySpannable;
+
+import de.schildbach.wallet.util.FingerprintHelper;
 import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
 
 import android.app.Activity;
-import android.app.LoaderManager;
 import android.arch.lifecycle.Observer;
 import android.arch.lifecycle.ViewModelProviders;
 import android.bluetooth.BluetoothAdapter;
-import android.content.AsyncTaskLoader;
 import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.Context;
-import android.content.CursorLoader;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.Loader;
 import android.content.pm.PackageManager;
 import android.database.ContentObserver;
 import android.database.Cursor;
@@ -123,14 +120,22 @@ import android.media.RingtoneManager;
 import android.net.Uri;
 import android.nfc.NdefMessage;
 import android.nfc.NfcAdapter;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Process;
+import android.support.annotation.RequiresApi;
 import android.support.design.widget.FloatingActionButton;
-import android.app.Fragment;
-import android.app.FragmentManager;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.AsyncTaskLoader;
+import android.support.v4.content.ContextCompat;
+import android.support.v4.content.CursorLoader;
+import android.support.v4.content.Loader;
 import android.support.v4.content.res.ResourcesCompat;
+import android.support.v4.os.CancellationSignal;
 import android.support.v7.widget.RecyclerView;
 import android.text.Editable;
 import android.text.Spannable;
@@ -144,6 +149,8 @@ import android.view.View.OnClickListener;
 import android.view.View.OnFocusChangeListener;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.AdapterView;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
@@ -153,8 +160,8 @@ import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.CursorAdapter;
 import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.TextView;
-import android.app.LoaderManager.LoaderCallbacks;
 
 /**
  * @author Andreas Schildbach
@@ -193,7 +200,8 @@ public final class SendCoinsFragment extends Fragment {
     private TransactionsAdapter sentTransactionAdapter;
     private RecyclerView.ViewHolder sentTransactionViewHolder;
     private EditText privateKeyPasswordView;
-    private View privateKeyBadPasswordView;
+    private TextView privateKeyBadPasswordView;
+    private ImageView fingerprintIcon;
     private TextView attemptsRemainingTextView;
     private Button viewGo;
 
@@ -214,6 +222,7 @@ public final class SendCoinsFragment extends Fragment {
     private Transaction dryrunTransaction;
     private Exception dryrunException;
     private PinRetryController pinRetryController;
+    private CancellationSignal fingerprintCancellationSignal;
 
     private boolean forceInstantSend = false;
 
@@ -377,7 +386,7 @@ public final class SendCoinsFragment extends Fragment {
         }
     };
 
-    private final LoaderCallbacks<Map<FeeCategory, Coin>> dynamicFeesLoaderCallbacks = new LoaderManager.LoaderCallbacks<Map<FeeCategory, Coin>>() {
+    private final LoaderManager.LoaderCallbacks<Map<FeeCategory, Coin>> dynamicFeesLoaderCallbacks = new LoaderManager.LoaderCallbacks<Map<FeeCategory, Coin>>() {
         @Override
         public Loader<Map<FeeCategory, Coin>> onCreateLoader(final int id, final Bundle args) {
             return new DynamicFeeLoader(activity);
@@ -395,7 +404,7 @@ public final class SendCoinsFragment extends Fragment {
         }
     };
 
-    private final LoaderCallbacks<Cursor> rateLoaderCallbacks = new LoaderManager.LoaderCallbacks<Cursor>() {
+    private final LoaderManager.LoaderCallbacks<Cursor> rateLoaderCallbacks = new LoaderManager.LoaderCallbacks<Cursor>() {
         @Override
         public Loader<Cursor> onCreateLoader(final int id, final Bundle args) {
             return new ExchangeRatesLoader(activity, config);
@@ -417,7 +426,7 @@ public final class SendCoinsFragment extends Fragment {
         }
     };
 
-    private final LoaderCallbacks<BlockchainState> blockchainStateLoaderCallbacks = new LoaderManager.LoaderCallbacks<BlockchainState>() {
+    private final LoaderManager.LoaderCallbacks<BlockchainState> blockchainStateLoaderCallbacks = new LoaderManager.LoaderCallbacks<BlockchainState>() {
         @Override
         public Loader<BlockchainState> onCreateLoader(final int id, final Bundle args) {
             return new BlockchainStateLoader(activity);
@@ -746,6 +755,7 @@ public final class SendCoinsFragment extends Fragment {
         privateKeyPasswordView = (EditText) view.findViewById(R.id.send_coins_private_key_password);
         privateKeyBadPasswordView = view.findViewById(R.id.send_coins_private_key_bad_password);
         attemptsRemainingTextView = (TextView) view.findViewById(R.id.pin_attempts);
+        fingerprintIcon = view.findViewById(R.id.fingerprint_icon);
 
         viewGo = (Button) view.findViewById(R.id.send_coins_go);
         viewGo.setOnClickListener(new OnClickListener() {
@@ -761,8 +771,8 @@ public final class SendCoinsFragment extends Fragment {
             }
         });
 
-        ExchangeRatesViewModel exchangeRatesViewModel = ViewModelProviders
-                .of((FragmentActivity) getActivity()).get(ExchangeRatesViewModel.class);
+        ExchangeRatesViewModel exchangeRatesViewModel = ViewModelProviders.of(this)
+                .get(ExchangeRatesViewModel.class);
         exchangeRatesViewModel.getRate(config.getExchangeCurrencyCode()).observe(this, new Observer<de.schildbach.wallet.rates.ExchangeRate>() {
             @Override
             public void onChanged(@android.support.annotation.Nullable de.schildbach.wallet.rates.ExchangeRate exchangeRate) {
@@ -798,6 +808,10 @@ public final class SendCoinsFragment extends Fragment {
 
         updateView();
         handler.post(dryrunRunnable);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            initFingerprintHelper();
+        }
     }
 
     @Override
@@ -813,6 +827,9 @@ public final class SendCoinsFragment extends Fragment {
 
         contentResolver.unregisterContentObserver(contentObserver);
 
+        if (fingerprintCancellationSignal != null) {
+            fingerprintCancellationSignal.cancel();
+        }
         super.onPause();
     }
 
@@ -966,6 +983,34 @@ public final class SendCoinsFragment extends Fragment {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.M)
+    private void initFingerprintHelper() {
+        FingerprintHelper fingerprintHelper = new FingerprintHelper(getActivity());
+        if (fingerprintHelper.init() && fingerprintHelper.isFingerprintEnabled()) {
+            fingerprintIcon.setVisibility(View.VISIBLE);
+            fingerprintCancellationSignal = new CancellationSignal();
+            fingerprintHelper.getPassword(fingerprintCancellationSignal, new FingerprintHelper.Callback() {
+                @Override
+                public void onSuccess(String savedPass) {
+                    privateKeyPasswordView.setText(savedPass);
+                    removeFingerprintError();
+                }
+
+                @Override
+                public void onFailure(String message, boolean canceled) {
+                    if (!canceled) {
+                        showFingerprintError();
+                    }
+                }
+
+                @Override
+                public void onHelp(int helpCode, String helpString) {
+                    showFingerprintError();
+                }
+            });
+        }
     }
 
     private void validateReceivingAddress() {
@@ -1202,6 +1247,7 @@ public final class SendCoinsFragment extends Fragment {
                 setState(State.INPUT);
 
                 pinRetryController.failedAttempt(pin);
+                privateKeyBadPasswordView.setText(R.string.private_key_bad_password);
                 privateKeyBadPasswordView.setVisibility(View.VISIBLE);
                 attemptsRemainingTextView.setVisibility(View.VISIBLE);
                 attemptsRemainingTextView.setText(pinRetryController.getRemainingAttemptsMessage());
@@ -1249,6 +1295,9 @@ public final class SendCoinsFragment extends Fragment {
                 @Override
                 public void onDismiss(DialogInterface dialog) {
                     if (!walletLock.isWalletLocked(wallet)) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                            initFingerprintHelper();
+                        }
                         handleEmpty();
                     }
                 }
@@ -1500,6 +1549,19 @@ public final class SendCoinsFragment extends Fragment {
         } else {
             getView().setVisibility(View.GONE);
         }
+    }
+
+    protected void showFingerprintError() {
+        fingerprintIcon.setColorFilter(ContextCompat.getColor(getActivity(), R.color.fg_error));
+        Animation shakeAnimation = AnimationUtils.loadAnimation(getActivity(), R.anim.shake);
+        fingerprintIcon.startAnimation(shakeAnimation);
+        privateKeyBadPasswordView.setText(R.string.unlock_with_fingerprint_error);
+        privateKeyBadPasswordView.setVisibility(View.VISIBLE);
+    }
+
+    protected void removeFingerprintError() {
+        fingerprintIcon.setColorFilter(ContextCompat.getColor(getActivity(), android.R.color.transparent));
+        privateKeyBadPasswordView.setVisibility(View.INVISIBLE);
     }
 
     private void initStateFromIntentExtras(final Bundle extras) {
