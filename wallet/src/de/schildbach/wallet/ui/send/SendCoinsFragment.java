@@ -43,6 +43,7 @@ import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionedChecksummedBytes;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
 import org.bitcoinj.uri.BitcoinURI;
+import org.bitcoinj.utils.Fiat;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.InstantXCoinSelector;
 import org.bitcoinj.wallet.KeyChain.KeyPurpose;
@@ -78,6 +79,7 @@ import de.schildbach.wallet.data.PaymentIntent.Standard;
 import de.schildbach.wallet.data.WalletLock;
 import de.schildbach.wallet.integration.android.BitcoinIntegration;
 import de.schildbach.wallet.offline.DirectPaymentTask;
+import de.schildbach.wallet.rates.ExchangeRatesViewModel;
 import de.schildbach.wallet.service.BlockchainState;
 import de.schildbach.wallet.service.BlockchainStateLoader;
 import de.schildbach.wallet.ui.AbstractBindServiceActivity;
@@ -101,6 +103,8 @@ import de.schildbach.wallet_test.R;
 
 import android.app.Activity;
 import android.app.LoaderManager;
+import android.arch.lifecycle.Observer;
+import android.arch.lifecycle.ViewModelProviders;
 import android.bluetooth.BluetoothAdapter;
 import android.content.AsyncTaskLoader;
 import android.content.ComponentName;
@@ -754,6 +758,15 @@ public final class SendCoinsFragment extends Fragment {
                 }
 
                 updateView();
+            }
+        });
+
+        ExchangeRatesViewModel exchangeRatesViewModel = ViewModelProviders
+                .of((FragmentActivity) getActivity()).get(ExchangeRatesViewModel.class);
+        exchangeRatesViewModel.getRate(config.getExchangeCurrencyCode()).observe(this, new Observer<de.schildbach.wallet.rates.ExchangeRate>() {
+            @Override
+            public void onChanged(@android.support.annotation.Nullable de.schildbach.wallet.rates.ExchangeRate exchangeRate) {
+
             }
         });
 
