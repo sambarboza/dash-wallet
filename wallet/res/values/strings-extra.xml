@@ -97,4 +97,6 @@
 	<string name="touch_fingerprint_sensor">Touch the fingerprint sensor.</string>
 	<string name="touch_fingerprint_to_enable">Touch the fingerprint sensor to enable unlocking with fingerprint.</string>
 
+	<string name="contacts">Contacts</string>
+
 </resources>
