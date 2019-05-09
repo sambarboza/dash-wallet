@@ -182,7 +182,7 @@ public class WalletApplication extends Application {
 
 		org.bitcoinj.core.Context context = wallet.getContext();
 
-		wallet.getContext().initDash(config.getLiteMode(), config.getInstantXEnabled());
+		wallet.getContext().initDash(true, true);
 
         if (config.versionCodeCrossed(packageInfo.versionCode, VERSION_CODE_SHOW_BACKUP_REMINDER)
                 && !wallet.getImportedKeys().isEmpty()) {
@@ -620,16 +620,6 @@ public class WalletApplication extends Application {
         alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, now + alarmInterval, AlarmManager.INTERVAL_DAY,
                 alarmIntent);
     }
-
-
-//dash Specific
-public void updateDashMode()
-		{
-		org.bitcoinj.core.Context context = wallet.getContext();
-
-		context.setAllowInstantXinLiteMode(config.getInstantXEnabled());
-		context.setLiteMode(config.getLiteMode());
-		}
 
     private void lockWalletIfNeeded() {
         WalletLock walletLock = WalletLock.getInstance();

@@ -155,7 +155,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
     private static final int MAX_HISTORY_SIZE = Math.max(IDLE_TRANSACTION_TIMEOUT_MIN, IDLE_BLOCK_TIMEOUT_MIN);
     private static final long APPWIDGET_THROTTLE_MS = DateUtils.SECOND_IN_MILLIS;
     private static final long BLOCKCHAIN_STATE_BROADCAST_THROTTLE_MS = DateUtils.SECOND_IN_MILLIS;
-    private static final long TX_EXCHANGE_RATE_TIME_THRESHOLD_MS = TimeUnit.MINUTES.toMillis(30);
+    private static final long TX_EXCHANGE_RATE_TIME_THRESHOLD_MS = TimeUnit.MINUTES.toMillis(180);
 
     private static final Logger log = LoggerFactory.getLogger(BlockchainServiceImpl.class);
 
@@ -179,11 +179,12 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
             long blockChainHeadTime = blockChain.getChainHead().getHeader().getTime().getTime();
             boolean insideTxExchangeRateTimeThreshold = (now - blockChainHeadTime) < TX_EXCHANGE_RATE_TIME_THRESHOLD_MS;
 
-            if (tx.getExchangeRate() == null && !replaying && insideTxExchangeRateTimeThreshold) {
+            if (tx.getExchangeRate() == null && ((!replaying || insideTxExchangeRateTimeThreshold) || tx.getConfidence().getConfidenceType() == ConfidenceType.PENDING)) {
                 try {
                     final de.schildbach.wallet.rates.ExchangeRate exchangeRate = AppDatabase.getAppDatabase()
                             .exchangeRatesDao().getRateSync(config.getExchangeCurrencyCode());
                     if (exchangeRate != null) {
+                        log.info("Setting exchange rate on received transaction.  Rate:  " + exchangeRate.toString() + " tx: " + tx.getHashAsString());
                         tx.setExchangeRate(new ExchangeRate(Coin.COIN, exchangeRate.getFiat()));
                         application.saveWallet();
                     }
@@ -302,9 +303,6 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
         public void onSharedPreferenceChanged(final SharedPreferences sharedPreferences, final String key) {
             if (Configuration.PREFS_KEY_CONNECTIVITY_NOTIFICATION.equals(key))
                 changed(peerCount);
-            if (Configuration.PREFS_KEY_INSTANTX_ENABLED.equals(key)) {
-                //InstantXSystem.get(blockChain).setEnabled(sharedPreferences.getBoolean(Configuration.PREFS_KEY_INSTANTX_ENABLED, false));
-            }
         }
 
         private void changed(final int numPeers) {
