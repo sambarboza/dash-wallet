@@ -34,9 +34,14 @@ public class StringListConverter {
 
     @TypeConverter
     public static String fromArrayList(ArrayList<String> value) {
-        StringBuilder sb = new StringBuilder(value.size());
+        if (value.size() == 0) {
+            return "";
+        }
+
+        String firstValue = value.remove(0);
+        StringBuilder sb = new StringBuilder(firstValue);
         for (String s : value) {
-            sb.append(s);
+            sb.append(",").append(s);
         }
         return sb.toString();
     }
