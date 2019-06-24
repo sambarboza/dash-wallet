@@ -90,6 +90,9 @@ public class ContactsActivity extends AbstractBindServiceActivity {
     }
 
     private void userLoaded(BlockchainUser user) {
+        UnlockWalletDialogFragment.show(getSupportFragmentManager(), null, encryptionKey -> {
+            viewModel.repository.createDashPayProfile(user, encryptionKey);
+        });
         String title = getString(R.string.hello_user, user.getUname());
         setTitle(title);
     }

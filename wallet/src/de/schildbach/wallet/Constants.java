@@ -85,14 +85,13 @@ public final class Constants {
             }
             case "devNet": {
                 DNS_SEED = new String[]{
-                        "devnet-maithai.thephez.com",
-                        "54.187.113.35", "54.200.201.200", "34.216.233.163",
-                        "34.221.188.185", "54.189.63.67", "52.40.117.135",
-                        "54.187.111.107", "34.212.68.164", "18.237.142.23",
-                        "54.202.73.177"
+                        "devnet-porto.thephez.com", "18.237.69.61", "18.236.234.255", "34.222.93.218",
+                        "54.202.56.14", "18.236.203.22", "52.25.254.66", "52.12.51.222",
+                        "54.189.199.102", "52.33.77.47", "34.211.58.233", "34.215.107.9",
+                        "54.218.17.62", "35.167.57.237"
                 };
                 BIP44_PATH = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET;
-                NETWORK_PARAMETERS = DevNetParams.get("maithai", "yMtULrhoxd8vRZrsnFobWgRTidtjg2Rnjm", 20001, DNS_SEED);
+                NETWORK_PARAMETERS = DevNetParams.get("porto", "yMtULrhoxd8vRZrsnFobWgRTidtjg2Rnjm", 20001, DNS_SEED);
                 IS_PROD_BUILD = false;
                 FILENAME_NETWORK_SUFFIX = "-devnet";
                 WALLET_NAME_CURRENCY_CODE = "tdash";
