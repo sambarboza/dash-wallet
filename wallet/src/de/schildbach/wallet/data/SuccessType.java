@@ -17,9 +17,26 @@
 
 package de.schildbach.wallet.data;
 
+import java.util.Arrays;
+
 /**
  * @author Samuel Barbosa
  */
 public enum SuccessType implements StatusType {
-    DEFAULT
+    DEFAULT;
+
+    @Override
+    public boolean isLoading() {
+        return false;
+    }
+
+    @Override
+    public boolean isSuccess() {
+        return Arrays.asList(SuccessType.values()).contains(this);
+    }
+
+    @Override
+    public boolean isError() {
+        return false;
+    }
 }

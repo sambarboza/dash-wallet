@@ -111,4 +111,7 @@
 	<string name="username_registered_success_message">Username %s registered with success.</string>
 	<string name="hello_user">Hello, %s</string>
 
+	<string name="contact_add">Add Contact</string>
+	<string name="contact_add_success">Contact request sent to %s successfully</string>
+
 </resources>

@@ -287,4 +287,8 @@ public final class Constants {
 
     //Backup Warnings (true = both seed and backup file, false = seed only)
     public static final boolean SUPPORT_BOTH_BACKUP_WARNINGS = false;
+
+    //Blockchain User Derivation Path
+    public static final ImmutableList<ChildNumber> EVOLUTION_ACCOUNT_PATH = ImmutableList.of(new ChildNumber(5, true),
+            ChildNumber.FIVE_HARDENED, ChildNumber.ZERO_HARDENED);
 }

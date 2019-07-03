@@ -17,9 +17,26 @@
 
 package de.schildbach.wallet.data;
 
+import java.util.Arrays;
+
 /**
  * @author Samuel Barbosa
  */
 public enum LoadingType implements StatusType {
-    DEFAULT
+    DEFAULT;
+
+    @Override
+    public boolean isLoading() {
+        return Arrays.asList(LoadingType.values()).contains(this);
+    }
+
+    @Override
+    public boolean isSuccess() {
+        return false;
+    }
+
+    @Override
+    public boolean isError() {
+        return false;
+    }
 }

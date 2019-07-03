@@ -22,6 +22,8 @@ import android.arch.lifecycle.ViewModel;
 
 import org.bitcoinj.core.Transaction;
 
+import java.util.Map;
+
 import de.schildbach.wallet.data.BlockchainUser;
 import de.schildbach.wallet.data.BlockchainUserRepository;
 import de.schildbach.wallet.data.Resource;
@@ -39,6 +41,10 @@ public class BlockchainUserViewModel extends ViewModel {
 
     public LiveData<Resource<BlockchainUser>> getUser() {
         return repository.getUser();
+    }
+
+    public LiveData<Resource<Map<String, Object>>> getDashPayProfile(BlockchainUser user) {
+        return repository.getDashPayProfile(user);
     }
 
 }

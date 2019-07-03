@@ -47,6 +47,7 @@ import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.crypto.ChildNumber;
+import org.bitcoinj.crypto.KeyCrypterScrypt;
 import org.bitcoinj.crypto.MnemonicCode;
 import org.bitcoinj.crypto.MnemonicException;
 import org.bitcoinj.script.Script;
@@ -56,10 +57,13 @@ import org.bitcoinj.wallet.KeyChainGroup;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletProtobufSerializer;
+import org.spongycastle.crypto.params.KeyParameter;
 
 import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableList;
 
 import de.schildbach.wallet.Constants;
+import de.schildbach.wallet.WalletApplication;
 
 import android.text.Editable;
 import android.text.Spannable;
@@ -67,6 +71,7 @@ import android.text.SpannableStringBuilder;
 import android.text.format.DateUtils;
 import android.text.style.TypefaceSpan;
 
+import static de.schildbach.wallet.Constants.EVOLUTION_ACCOUNT_PATH;
 import static org.dash.wallet.common.Constants.CHAR_THIN_SPACE;
 
 /**
@@ -353,4 +358,26 @@ public class WalletUtils {
     public static boolean isPayToManyTransaction(final Transaction transaction) {
         return transaction.getOutputs().size() > 20;
     }
+
+    public static ECKey getUserPrivateKey(KeyParameter encryptionKey) {
+        WalletApplication application = WalletApplication.getInstance();
+        Wallet wallet = application.getWallet();
+
+        //Add Evolution Derivation Path if it's not added yet.
+        if (!wallet.hasKeyChain(EVOLUTION_ACCOUNT_PATH)) {
+            KeyCrypterScrypt keyCrypter = new KeyCrypterScrypt(application.scryptIterationsTarget());
+            DeterministicSeed deterministicSeed = wallet.getKeyChainSeed().decrypt(keyCrypter,
+                    null, encryptionKey);
+            DeterministicKeyChain keyChain = new DeterministicKeyChain(deterministicSeed, EVOLUTION_ACCOUNT_PATH);
+            DeterministicKeyChain encryptedKeyChain = keyChain.toEncrypted(keyCrypter, encryptionKey);
+            wallet.addAndActivateHDChain(encryptedKeyChain);
+        }
+
+        //Get user private key, create and send SubTx
+        DeterministicKeyChain keyChain = wallet.getActiveKeyChain().toDecrypted(encryptionKey);
+        ECKey privKey = ECKey.fromPrivate(keyChain.getKeyByPath(EVOLUTION_ACCOUNT_PATH,
+                false).getPrivKeyBytes());
+        return privKey;
+    }
+
 }

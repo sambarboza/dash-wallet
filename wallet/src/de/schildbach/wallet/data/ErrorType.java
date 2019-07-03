@@ -17,11 +17,28 @@
 
 package de.schildbach.wallet.data;
 
+import java.util.Arrays;
+
 /**
  * @author Samuel Barbosa
  */
 public enum ErrorType implements StatusType {
     DEFAULT,
     TX_REJECT_DUP_USERNAME,
-    INSUFFICIENT_MONEY
+    INSUFFICIENT_MONEY;
+
+    @Override
+    public boolean isLoading() {
+        return false;
+    }
+
+    @Override
+    public boolean isSuccess() {
+        return false;
+    }
+
+    @Override
+    public boolean isError() {
+        return Arrays.asList(ErrorType.values()).contains(this);
+    }
 }

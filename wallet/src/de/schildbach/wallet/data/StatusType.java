@@ -21,4 +21,7 @@ package de.schildbach.wallet.data;
  * @author Samuel Barbosa
  */
 public interface StatusType {
+    boolean isLoading();
+    boolean isSuccess();
+    boolean isError();
 }
