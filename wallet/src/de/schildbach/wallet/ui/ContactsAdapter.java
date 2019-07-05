@@ -39,7 +39,7 @@ public class ContactsAdapter extends RecyclerView.Adapter<ContactsAdapter.Contac
                 view = inflater.inflate(R.layout.contact_item, viewGroup, false);
                 break;
             case PENDING:
-                view = inflater.inflate(R.layout.proposed_contact_item, viewGroup, false);
+                view = inflater.inflate(R.layout.pending_contact_item, viewGroup, false);
                 break;
             case REQUEST:
                 view = inflater.inflate(R.layout.contact_request_item, viewGroup, false);
@@ -79,6 +79,7 @@ public class ContactsAdapter extends RecyclerView.Adapter<ContactsAdapter.Contac
                     }
                     break;
                 case PENDING:
+                    acceptBtn.setVisibility(View.GONE);
                     if (contact.getData().containsKey("username")) {
                         username.setText((String) contact.getData().get("username"));
                     } else {
@@ -86,6 +87,7 @@ public class ContactsAdapter extends RecyclerView.Adapter<ContactsAdapter.Contac
                     }
                     break;
                 case REQUEST:
+                    acceptBtn.setVisibility(View.VISIBLE);
                     if (contact.getData().containsKey("username")) {
                         username.setText((String) contact.getData().get("username"));
                     } else {

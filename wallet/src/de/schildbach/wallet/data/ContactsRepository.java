@@ -3,11 +3,9 @@ package de.schildbach.wallet.data;
 import android.arch.lifecycle.LiveData;
 import android.arch.lifecycle.MediatorLiveData;
 import android.arch.lifecycle.MutableLiveData;
-import android.util.Log;
 
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.core.Transaction;
 import org.dashevo.dapiclient.DapiClient;
 import org.dashevo.dapiclient.callback.DapiRequestCallback;
 import org.dashevo.dapiclient.model.JsonRPCResponse;
@@ -63,7 +61,7 @@ public class ContactsRepository {
     //However, we need to evaluate the need and possibility of fetching data from multiple contracts
     //from a single DapiClient instance
     private DapiClient dapiClient = new DapiClient("http://devnet-porto.thephez.com",
-            "3000", false);
+            "3000", true);
     private String contractId = "2TRFRpoGu3BpBKfFDmhbJJdDPzLdW4qbdfebkbeCHwj3";
 
     private Resource<List<Document>> toDocumentsList(List<Map<String, Object>> mapList) {
@@ -115,7 +113,11 @@ public class ContactsRepository {
 
     @SuppressWarnings("SuspiciousMethodCalls")
     private void deriveContactsState() {
-        if (receivedRequests.getValue().data.isEmpty() || sentRequests.getValue().data.isEmpty()) {
+        if (receivedRequests.getValue() == null || receivedRequests.getValue().data == null ||
+                sentRequests.getValue() == null || sentRequests.getValue().data == null) {
+            return;
+        }
+        if (receivedRequests.getValue().data.isEmpty() && sentRequests.getValue().data.isEmpty()) {
             return;
         }
 
@@ -205,14 +207,21 @@ public class ContactsRepository {
         }
     }
 
-    public MediatorLiveData<Resource<ContactsState>> getContacts() {
+    public MediatorLiveData<Resource<ContactsState>> getContacts(boolean loadData) {
+        if (!loadData) {
+            return contacts;
+        }
+
         sentRequests.postValue(new Resource<>(LoadingType.DEFAULT, Collections.emptyList()));
         receivedRequests.postValue(new Resource<>(LoadingType.DEFAULT, Collections.emptyList()));
         executor.execute(() -> {
             BlockchainUser user = AppDatabase.getAppDatabase().blockchainUserDao().getSync();
-            getPendingContacts(user.getRegtxid());
-            getContactRequests(user.getRegtxid());
+            if (user != null) {
+                getPendingContacts(user.getRegtxid());
+                getContactRequests(user.getRegtxid());
+            }
         });
+
         return contacts;
     }
 

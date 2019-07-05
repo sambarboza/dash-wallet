@@ -14,8 +14,8 @@ public class ContactsViewModel extends ViewModel {
 
     ContactsRepository repository = ContactsRepository.getInstance();
 
-    public LiveData<Resource<ContactsState>> getContacts() {
-        return repository.getContacts();
+    public LiveData<Resource<ContactsState>> getContacts(boolean loadData) {
+        return repository.getContacts(loadData);
     }
 
     public LiveData<Resource<String>> addContact(String username, byte[] privKeyBytes) {

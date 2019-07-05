@@ -38,6 +38,7 @@ import de.schildbach.wallet_test.R;
 public class ContactsActivity extends AbstractBindServiceActivity {
 
     BlockchainUserViewModel buViewModel;
+    ContactsViewModel contactsViewModel;
     private ProgressDialog loadingDialog;
     TabLayout tabLayout;
     ViewPager viewPager;
@@ -58,10 +59,10 @@ public class ContactsActivity extends AbstractBindServiceActivity {
         tabLayout.setupWithViewPager(viewPager);
 
         showLoading();
-        initViewModel();
+        initViewModels();
     }
 
-    private void initViewModel() {
+    private void initViewModels() {
         buViewModel = ViewModelProviders.of(this).get(BlockchainUserViewModel.class);
         buViewModel.getUser().observe(this, buResource -> {
             StatusType status = buResource.status;
@@ -80,12 +81,19 @@ public class ContactsActivity extends AbstractBindServiceActivity {
                 Toast.makeText(this, R.string.unknown_error, Toast.LENGTH_LONG).show();
             }
         });
+        contactsViewModel = ViewModelProviders.of(this).get(ContactsViewModel.class);
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
         hideLoading();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        contactsViewModel.getContacts(true);
     }
 
     @Override

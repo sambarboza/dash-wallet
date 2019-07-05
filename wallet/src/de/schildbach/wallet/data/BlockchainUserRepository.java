@@ -81,7 +81,7 @@ public class BlockchainUserRepository {
     }
 
     private DapiClient dapiClient = new DapiClient("http://devnet-porto.thephez.com",
-            "3000", false);
+            "3000", true);
     private String contractId = "2TRFRpoGu3BpBKfFDmhbJJdDPzLdW4qbdfebkbeCHwj3";
 
     public LiveData<Resource<Transaction>> createBlockchainUser(final String username, byte[] encryptionKeyBytes) {
@@ -135,7 +135,19 @@ public class BlockchainUserRepository {
         Sha256Hash subTxHash = Sha256Hash.wrap(user.getRegtxid());
         List<String> stateTxHashes = user.getSubtx();
         int stateTxCount = stateTxHashes.size();
-        Sha256Hash lastStateTxHash = Sha256Hash.wrap(stateTxHashes.get(stateTxCount - 1));
+
+        Sha256Hash lastStateTxHash = null;
+
+        if (stateTxCount > 0) {
+            String lastStateTxHashStr = stateTxHashes.get(stateTxCount - 1);
+            if (!lastStateTxHashStr.isEmpty()) {
+                lastStateTxHash = Sha256Hash.wrap(lastStateTxHashStr);
+            }
+        }
+        if (lastStateTxHash == null) {
+            lastStateTxHash = Sha256Hash.wrap(user.getRegtxid());
+        }
+
         createDashPayProfile(user.getUname(), subTxHash, lastStateTxHash, privKey);
     }
 
@@ -198,20 +210,24 @@ public class BlockchainUserRepository {
             @Override
             public void onChanged(@android.support.annotation.Nullable BlockchainUser user) {
                 buLiveData.removeObserver(this);
-                dapiClient.getUser(user.getUname(), new DapiRequestCallback<org.dashevo.dapiclient.model.BlockchainUser>() {
-                    @Override
-                    public void onSuccess(@NotNull JsonRPCResponse<org.dashevo.dapiclient.model.BlockchainUser> jsonRPCResponse) {
-                        executor.execute(() -> {
-                            BlockchainUser blockchainUser = BlockchainUser.fromDapiClientObject(jsonRPCResponse.getResult());
-                            AppDatabase.getAppDatabase().blockchainUserDao().insert(blockchainUser);
-                        });
-                    }
+                if (user != null) {
+                    dapiClient.getUser(user.getUname(), new DapiRequestCallback<org.dashevo.dapiclient.model.BlockchainUser>() {
+                        @Override
+                        public void onSuccess(@NotNull JsonRPCResponse<org.dashevo.dapiclient.model.BlockchainUser> jsonRPCResponse) {
+                            executor.execute(() -> {
+                                BlockchainUser blockchainUser = BlockchainUser.fromDapiClientObject(jsonRPCResponse.getResult());
+                                AppDatabase.getAppDatabase().blockchainUserDao().insert(blockchainUser);
+                            });
+                        }
 
-                    @Override
-                    public void onError(@NotNull String s) {
+                        @Override
+                        public void onError(@NotNull String s) {
 
-                    }
-                });
+                        }
+                    });
+                } else {
+                    userLiveData.postValue(new Resource<>(ErrorType.DEFAULT, null));
+                }
             }
         };
         buLiveData.observeForever(buObserver);
@@ -230,8 +246,13 @@ public class BlockchainUserRepository {
         dapiClient.fetchDocuments(contractId, "profile", new DapiRequestCallback<List<Map<String, Object>>>() {
             @Override
             public void onSuccess(@NotNull JsonRPCResponse<List<Map<String, Object>>> jsonRPCResponse) {
-                Map<String, Object> profileMap = jsonRPCResponse.getResult().get(0);
-                liveData.postValue(new Resource<>(SuccessType.DEFAULT, profileMap));
+                List<Map<String, Object>> profiles = jsonRPCResponse.getResult();
+                if (!profiles.isEmpty()) {
+                    Map<String, Object> profileMap = profiles.get(0);
+                    liveData.postValue(new Resource<>(SuccessType.DEFAULT, profileMap));
+                } else {
+                    liveData.postValue(new Resource<>(ErrorType.DEFAULT, null));
+                }
             }
 
             @Override

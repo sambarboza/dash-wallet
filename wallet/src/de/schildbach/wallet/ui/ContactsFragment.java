@@ -65,8 +65,8 @@ public class ContactsFragment extends Fragment {
         adapter = new ContactsAdapter(contactsType);
         contactsRv.setAdapter(adapter);
 
-        viewModel = ViewModelProviders.of(this).get(ContactsViewModel.class);
-        viewModel.getContacts().observe(this, contactsStateResource -> {
+        viewModel = ViewModelProviders.of(getActivity()).get(ContactsViewModel.class);
+        viewModel.getContacts(false).observe(this, contactsStateResource -> {
             switch (contactsType) {
                 case CONTACT:
                     setContacts(contactsStateResource.data.getContacts());
@@ -107,7 +107,7 @@ public class ContactsFragment extends Fragment {
                                 Toast.makeText(getContext(),
                                         "Success! Please wait for a block to see the changes reflected.",
                                         Toast.LENGTH_SHORT).show();
-                                viewModel.getContacts();
+                                viewModel.getContacts(true);
                             } else {
                                 Toast.makeText(getContext(), "Error", Toast.LENGTH_SHORT).show();
                             }

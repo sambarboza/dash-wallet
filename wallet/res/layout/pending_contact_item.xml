@@ -14,34 +14,25 @@
         android:layout_marginEnd="8dp"/>
 
     <ImageButton
-        android:id="@+id/accept_btn"
-        android:layout_centerVertical="true"
+        android:id="@+id/acceptBtn"
+        android:visibility="gone"
+        tools:visibility="visible"
         android:layout_alignParentEnd="true"
-        android:backgroundTint="@android:color/transparent"
-        android:tint="@color/colorPrimaryDark"
-        android:src="@drawable/accept"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content" />
-
-    <ImageButton
-        android:id="@+id/reject_btn"
         android:layout_centerVertical="true"
-        android:layout_toStartOf="@id/accept_btn"
         android:backgroundTint="@android:color/transparent"
         android:tint="@color/colorPrimaryDark"
-        android:src="@drawable/close"
+        android:src="@drawable/ic_accept"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content" />
 
     <TextView
         android:id="@+id/username"
         android:layout_toEndOf="@id/avatar"
-        android:layout_toStartOf="@id/reject_btn"
         android:layout_centerVertical="true"
         android:gravity="center_vertical"
         android:textColor="@color/colorPrimaryDark"
         android:fontFamily="sans-serif-medium"
-        tools:text="Alice added you as a contact"
+        tools:text="Alice"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content" />
 
