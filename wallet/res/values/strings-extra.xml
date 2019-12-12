@@ -236,6 +236,10 @@
     <string name="block_info">Block Info</string>
     <string name="confirm">Confirm</string>
 
+    <string name="auto_logout">Auto Logout</string>
+    <string name="logout_after">Logout after</string>
+    <string name="immediately">Immediately</string>
+
     <string-array name="history_filter">
         <item>All</item>
         <item>Received</item>
