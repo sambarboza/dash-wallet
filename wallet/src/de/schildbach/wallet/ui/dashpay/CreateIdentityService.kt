@@ -115,7 +115,8 @@ class CreateIdentityService : LifecycleService() {
         // for now this class will start the whole process from scratch.  Create the Status and the Identity objects
         identityCreationState = IdentityCreationState(IdentityCreationState.State.UPGRADING_WALLET, false, username)
         identityCreationStateDaoAsync.insert(identityCreationState)
-        blockchainIdentityData = BlockchainIdentityData(0, null ,null, null, null, null, null, username)
+        //blockchainIdentityData = BlockchainIdentityData(0, null ,null, null, null, null, null, username)
+        blockchainIdentityData = BlockchainIdentityData(0, username)
 
         if (identityCreationState.state != IdentityCreationState.State.UPGRADING_WALLET || identityCreationState.error) {
             log.info("resuming identity creation process [${identityCreationState.state}${if (identityCreationState.error) "(error)" else ""}]")
@@ -192,6 +193,12 @@ class CreateIdentityService : LifecycleService() {
         updateState(IdentityCreationState.State.USERNAME_REGISTERED)
         updateBlockchainIdentity(blockchainIdentity)
 
+        updateState(IdentityCreationState.State.DASHPAY_PROFILE_CREATING)
+        platformRepo.createDashPayProfile(blockchainIdentity, encryptionKey)
+        delay2s()
+        //TODO: Check profile creation
+        updateState(IdentityCreationState.State.DASHPAY_PROFILE_CREATED)
+        println("Maybe a DashPay Profile was created to ${blockchainIdentity}")
         // aaaand we're done :)
     }
 
