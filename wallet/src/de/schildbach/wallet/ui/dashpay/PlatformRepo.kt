@@ -15,7 +15,6 @@
  */
 package de.schildbach.wallet.ui.dashpay
 
-import androidx.lifecycle.MutableLiveData
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Resource
@@ -26,7 +25,6 @@ import org.bitcoinj.core.Context
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bouncycastle.crypto.params.KeyParameter
-import org.dashevo.dapiclient.model.DocumentQuery
 import org.dashevo.dashpay.BlockchainIdentity
 import org.dashevo.dashpay.Profiles
 import org.dashevo.dpp.document.Document
@@ -62,16 +60,9 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         }
     }
 
-    fun getDashPayProfiles(): Resource<List<Document>> {
-        return try {
-            val queryOpts = DocumentQuery.Builder().build()
-            val documents = platform.documents.get("dashpay.profile", queryOpts)
-            Resource.success(documents)
-        } catch (e: Exception) {
-            Resource.error(e.localizedMessage, null)
-        }
-    }
-
+    //
+    // Step 1 is to upgrade the wallet to support authentication keys
+    //
     suspend fun addWalletAuthenticationKeysAsync(seed: DeterministicSeed, keyParameter: KeyParameter?) {
         withContext(Dispatchers.IO) {
             val wallet = walletApplication.wallet
