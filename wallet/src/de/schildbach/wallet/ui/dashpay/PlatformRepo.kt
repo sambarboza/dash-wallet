@@ -25,8 +25,10 @@ import org.bitcoinj.core.Context
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bouncycastle.crypto.params.KeyParameter
+import org.dashevo.dapiclient.model.DocumentQuery
 import org.dashevo.dashpay.BlockchainIdentity
 import org.dashevo.dpp.document.Document
+import org.dashevo.platform.Names
 import org.dashevo.platform.Platform
 import java.util.concurrent.TimeoutException
 
@@ -54,6 +56,23 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                 nameDocument = platform.names.get(username, "")
             }
             Resource.success(nameDocument)
+        } catch (e: Exception) {
+            Resource.error(e.localizedMessage, null)
+        }
+    }
+
+    fun searchDashPayProfiles(query: String): Resource<List<Document>> {
+        return try {
+            var documents = listOf<Document>()
+            documents = platform.names.search(query, Names.DEFAULT_PARENT_DOMAIN,false, 0)
+            var userIds = arrayListOf<String>()
+            for (doc in documents) {
+                userIds.add(doc.userId)
+            }
+            val dashPayProfilesQuery = DocumentQuery.Builder().startAt(0)
+                    .whereIn("\$userId", userIds).build()
+            documents = platform.documents.get("dashpay.profile", dashPayProfilesQuery)
+            Resource.success(documents)
         } catch (e: Exception) {
             Resource.error(e.localizedMessage, null)
         }
@@ -120,7 +139,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
             val set = blockchainIdentity.getUsernamesWithStatus(BlockchainIdentity.UsernameStatus.PREORDER_REGISTRATION_PENDING)
             val saltedDomainHashes = blockchainIdentity.saltedDomainHashesForUsernames(set)
             val (result, usernames) = blockchainIdentity.watchPreorder(saltedDomainHashes, 10, 5000, BlockchainIdentity.RetryDelayType.SLOW20)
-            if(!result) {
+            if (!result) {
                 throw TimeoutException("the usernames: $usernames were not found to be preordered in the allotted amount of time")
             }
         }
@@ -142,7 +161,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
     suspend fun isNameRegisteredAsync(blockchainIdentity: BlockchainIdentity) {
         withContext(Dispatchers.IO) {
             val (result, usernames) = blockchainIdentity.watchUsernames(blockchainIdentity.getUsernamesWithStatus(BlockchainIdentity.UsernameStatus.REGISTRATION_PENDING), 10, 5000, BlockchainIdentity.RetryDelayType.SLOW20)
-            if(!result) {
+            if (!result) {
                 throw TimeoutException("the usernames: $usernames were not found to be registered in the allotted amount of time")
             }
         }
