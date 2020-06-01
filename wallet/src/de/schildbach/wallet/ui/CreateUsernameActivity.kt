@@ -33,6 +33,8 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelProviders
 import de.schildbach.wallet.AppDatabase
+import de.schildbach.wallet.Constants.USERNAME_MAX_LENGTH
+import de.schildbach.wallet.Constants.USERNAME_MIN_LENGTH
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.IdentityCreationState
 import de.schildbach.wallet.livedata.Status
@@ -182,7 +184,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
     private fun validateUsernameSize(uname: String): Boolean {
         val isValid: Boolean
 
-        min_chars_req_img.visibility = if (uname.length in 3..23) {
+        min_chars_req_img.visibility = if (uname.length in USERNAME_MIN_LENGTH..USERNAME_MAX_LENGTH) {
             isValid = true
             min_chars_req_label.typeface = mediumTypeFace
             View.VISIBLE
