@@ -92,7 +92,7 @@ class PlatformRepo(val walletApplication: WalletApplication) {
         return try {
             val wallet = walletApplication.wallet
             val blockchainIdentity = blockchainIdentityDataDaoAsync.load()
-            //We don't check for nullity here because if it's null, it'll be thrown, caputred below
+            //We don't check for nullity here because if it's null, it'll be thrown, captured below
             //and sent as a Resource.error
             val creditFundingTx = wallet.getCreditFundingTransaction(wallet.getTransaction(blockchainIdentity!!.creditFundingTxId))
             val userId = creditFundingTx.creditBurnIdentityIdentifier.toStringBase58()
@@ -140,14 +140,27 @@ class PlatformRepo(val walletApplication: WalletApplication) {
                 }
 
                 val profileDoc = profileById[nameDoc.userId]
-
+                val profile = if (profileDoc != null) {
+                    DashPayProfile.fromDocument(profileDoc)
+                } else {
+                    DashPayProfile(nameDoc.userId, "", "", "")
+                }
                 usernameSearchResults.add(UsernameSearchResult(nameDoc.data["normalizedLabel"] as String,
-                        nameDoc, profileDoc, toContact, fromContact))
+                        nameDoc, profile!!, toContact, fromContact))
             }
 
             Resource.success(usernameSearchResults)
         } catch (e: Exception) {
             Resource.error(e.localizedMessage, null)
+        }
+    }
+
+    fun getIdentity(userId: String) {
+        try {
+            val identity = platform.identities.get(userId)
+            println("identity: $identity")
+        } catch (e: Exception) {
+            println("deu merda: $e")
         }
     }
 

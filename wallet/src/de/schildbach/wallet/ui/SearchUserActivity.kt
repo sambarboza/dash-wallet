@@ -204,10 +204,7 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, UsernameSear
     }
 
     override fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult) {
-        val dashPayProfile = usernameSearchResult.profileDocument?.let{
-            DashPayProfile.fromDocument(usernameSearchResult.profileDocument)
-        }
-
+        val dashPayProfile = usernameSearchResult.profile
         //TODO: remove after Contact Request creation from the app. Using mocked states for testing purposes
         val intent = DashPayUserActivity.createIntent(this@SearchUserActivity,
                 usernameSearchResult.username, dashPayProfile, contactRequestSent = false,

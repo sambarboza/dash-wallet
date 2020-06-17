@@ -33,6 +33,7 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
     // Job instance (https://stackoverflow.com/questions/57723714/how-to-cancel-a-running-livedata-coroutine-block/57726583#57726583)
     private var getUsernameJob = Job()
     private var searchUsernamesJob = Job()
+    private val contactRequestJob by lazy { Job() }
 
     val getUsernameLiveData = Transformations.switchMap(usernameLiveData) { username ->
         getUsernameJob.cancel()
@@ -55,6 +56,7 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
         super.onCleared()
         getUsernameJob.cancel()
         searchUsernamesJob.cancel()
+        contactRequestJob.cancel()
     }
 
     //
@@ -84,4 +86,12 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
             platformRepo.doneAndDismiss()
         }
     }
+
+    fun sendContactRequest(toUserId: String) {
+        contactRequestJob.run {
+            platformRepo.getIdentity(toUserId)
+            this.complete()
+        }
+    }
+
 }

@@ -9,7 +9,7 @@ import org.dashevo.dpp.document.Document
 
 data class UsernameSearchResult(val username: String,
                                 val domainDocument: Document,
-                                val profileDocument: Document?,
+                                val profile: DashPayProfile,
                                 val toContactRequest: Document?,
                                 val fromContactRequest: Document?) {
     val requestSent = toContactRequest != null

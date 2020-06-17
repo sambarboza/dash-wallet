@@ -63,15 +63,10 @@ class UsernameSearchResultsAdapter() : RecyclerView.Adapter<UsernameSearchResult
             val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(itemView.context,
                     usernameSearchResult.username[0])
             username.text = usernameSearchResult.username
-            if (usernameSearchResult.profileDocument != null) {
-                usernameSearchResult.profileDocument.apply {
-                    displayName.text = data["displayName"] as String
-                    Glide.with(avatar).load(data["avatarUrl"]).circleCrop()
-                            .placeholder(defaultAvatar).into(avatar)
-                }
-            } else {
-                avatar.background = defaultAvatar
-            }
+            val profile = usernameSearchResult.profile
+            displayName.text = profile.displayName
+            Glide.with(avatar).load(profile.avatarUrl).circleCrop().placeholder(defaultAvatar)
+                    .into(avatar)
             itemClickListener?.let { l ->
                 this.itemView.setOnClickListener {
                     l.onItemClicked(it, usernameSearchResult)
