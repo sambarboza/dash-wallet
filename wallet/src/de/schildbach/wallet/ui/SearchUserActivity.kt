@@ -40,7 +40,6 @@ import androidx.transition.Transition
 import androidx.transition.TransitionManager
 import de.schildbach.wallet.Constants.USERNAME_MIN_LENGTH
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
@@ -206,7 +205,6 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, UsernameSear
 
     override fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult) {
         val dashPayProfile = usernameSearchResult.dashPayProfile
-
         //TODO: remove after Contact Request creation from the app. Using mocked states for testing purposes
         val intent = DashPayUserActivity.createIntent(this@SearchUserActivity,
                 usernameSearchResult.username, dashPayProfile, contactRequestSent = false,
