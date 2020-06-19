@@ -11,7 +11,8 @@ data class DashPayContactRequest(@PrimaryKey val entropy: String,
                                  val encryptedPublicKey: ByteArray,
                                  val senderKeyIndex: Int,
                                  val recipientKeyIndex: Int,
-                                 val timestamp: Double,
+                                 //val timestamp: Double,
+                                 val timestamp: Long,
                                  val hidden: Boolean, // is the request from another user hidden (local)
                                  val dateAdded: Long  // when was this request created or accepted (local)
-                                )
+)
