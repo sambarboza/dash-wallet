@@ -21,6 +21,8 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.AnimationDrawable
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.View
 import android.widget.Toast
 import androidx.core.text.HtmlCompat
@@ -60,6 +62,8 @@ class DashPayUserActivity : InteractionAwareActivity(),
     private var contactRequestReceived: Boolean = false
     private var contactRequestSent: Boolean = false
     private var sendingRequest: Boolean = true
+    private var observingNotifications: Boolean = false
+    private val contactSearchHandler by lazy { Handler() }
 
     companion object {
         private const val USERNAME = "username"
@@ -125,43 +129,37 @@ class DashPayUserActivity : InteractionAwareActivity(),
         payContactBtn.setOnClickListener { startPayActivity() }
 
         dashPayViewModel.getContactRequestLiveData.observe(this, object : Observer<Resource<DashPayContactRequest>> {
-        override fun onChanged(it: Resource<DashPayContactRequest>?) {
-            if (it != null) {
-                when (it.status) {
-                    Status.ERROR -> {
-                        var msg = it.message
-                        if (msg == null) {
-                            msg = "!!Error!!"
+            override fun onChanged(it: Resource<DashPayContactRequest>?) {
+                if (it != null) {
+                    when (it.status) {
+                        Status.ERROR -> {
+                            var msg = it.message
+                            if (msg == null) {
+                                msg = "!!Error!!"
+                            }
+                            Toast.makeText(this@DashPayUserActivity, msg, Toast.LENGTH_LONG).show()
                         }
-                        Toast.makeText(this@DashPayUserActivity, msg, Toast.LENGTH_LONG).show()
-                    }
-                    Status.SUCCESS -> {
-                        setResult(RESULT_CODE_CHANGED)
-                        if (sendingRequest) {
-                            contactRequestSent = true
-                        } else {
-                            contactRequestReceived = true
+                        Status.SUCCESS -> {
+                            setResult(RESULT_CODE_CHANGED)
+                            if (sendingRequest) {
+                                contactRequestSent = true
+                            } else {
+                                contactRequestReceived = true
+                            }
+                            updateContactRelationUi()
+                            dashPayViewModel.getContactRequestLiveData.removeObserver(this)
                         }
-                        updateContactRelationUi()
-                        dashPayViewModel.getContactRequestLiveData.removeObserver(this)
                     }
-                }
-            }
-        }
-    })
-
-    activity_rv.layoutManager = LinearLayoutManager(this)
-    activity_rv.adapter = this.notificationsAdapter
-
-    if (contactRequestReceived || contactRequestSent) {
-        dashPayViewModel.notificationsForUserLiveData.observe(this, Observer {
-            if (Status.SUCCESS == it.status) {
-                if (it.data != null) {
-                    processResults(it.data)
                 }
             }
         })
-    }
+
+        activity_rv.layoutManager = LinearLayoutManager(this)
+        activity_rv.adapter = this.notificationsAdapter
+
+        if (contactRequestReceived || contactRequestSent) {
+            observeNotificationsForUser()
+        }
 
         if (showContactHistoryDisclaimer && !contactRequestReceived) {
             contact_history_disclaimer.visibility = View.VISIBLE
@@ -173,6 +171,25 @@ class DashPayUserActivity : InteractionAwareActivity(),
         }
 
         updateContactRelationUi()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        contactSearchHandler.removeCallbacks(contactSearchRunnable)
+    }
+
+    private fun observeNotificationsForUser() {
+        if (observingNotifications) {
+            return
+        }
+        observingNotifications = true
+        dashPayViewModel.notificationsForUserLiveData.observe(this, Observer {
+            if (Status.SUCCESS == it.status) {
+                if (it.data != null) {
+                    processResults(it.data)
+                }
+            }
+        })
     }
 
     private fun sendContactRequest(isSendingRequest: Boolean, fromDisclaimer: Boolean = false) {
@@ -221,7 +238,7 @@ class DashPayUserActivity : InteractionAwareActivity(),
             true to false -> {
                 contactRequestSentBtn.visibility = View.VISIBLE
                 activity_rv.visibility = View.VISIBLE
-                dashPayViewModel.searchNotificationsForUser(profile.userId)
+                startContactSearchInterval()
                 if (contact_history_disclaimer.visibility == View.VISIBLE) {
                     sendContactRequestBtn.visibility = View.GONE
                     sendingContactRequestDisclaimerBtn.visibility = View.GONE
@@ -243,6 +260,16 @@ class DashPayUserActivity : InteractionAwareActivity(),
                 requestTitle.text = getString(R.string.contact_request_received_title, username)
             }
         }
+    }
+    private var contactSearchRunnable: Runnable = object : Runnable {
+        override fun run() {
+            dashPayViewModel.searchNotificationsForUser(profile.userId)
+            contactSearchHandler.postDelayed(this, 2000)
+        }
+    }
+
+    private fun startContactSearchInterval() {
+        contactSearchRunnable.run()
     }
 
     override fun finish() {

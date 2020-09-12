@@ -302,25 +302,29 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
                 // find matches where the text matches part of the username or displayName
                 // if the text is blank, match everything
-                val username = profile.value!!.username
-                val displayName = profile.value!!.displayName
-                val usernameContainsSearchText = username.findLastAnyOf(listOf(searchText), ignoreCase = true) != null ||
-                        displayName.findLastAnyOf(listOf(searchText), ignoreCase = true) != null
-                if (!usernameContainsSearchText && searchText != "") {
-                    continue
+                if (profile.value != null) {
+                    val username = profile.value!!.username
+                    val displayName = profile.value!!.displayName
+                    val usernameContainsSearchText = username.findLastAnyOf(listOf(searchText), ignoreCase = true) != null ||
+                            displayName.findLastAnyOf(listOf(searchText), ignoreCase = true) != null
+                    if (!usernameContainsSearchText && searchText != "") {
+                        continue
+                    }
+
+                    // Determine if this identity is our contact
+                    toContact = toContactMap[profile.value!!.userId]
+
+                    // Determine if I am this identity's contact
+                    fromContact = fromContactMap[profile.value!!.userId]
+
+                    val usernameSearchResult = UsernameSearchResult(profile.value!!.username,
+                            profile.value!!, toContact, fromContact)
+
+                    if (usernameSearchResult.requestReceived || (includeSentPending && usernameSearchResult.requestSent))
+                        usernameSearchResults.add(usernameSearchResult)
+                } else {
+                    log.debug("profile for ${profile.key} is null")
                 }
-
-                // Determine if this identity is our contact
-                toContact = toContactMap[profile.value!!.userId]
-
-                // Determine if I am this identity's contact
-                fromContact = fromContactMap[profile.value!!.userId]
-
-                val usernameSearchResult = UsernameSearchResult(profile.value!!.username,
-                        profile.value!!, toContact, fromContact)
-
-                if (usernameSearchResult.requestReceived || (includeSentPending && usernameSearchResult.requestSent))
-                    usernameSearchResults.add(usernameSearchResult)
             }
             when (orderBy) {
                 UsernameSortOrderBy.DISPLAY_NAME -> usernameSearchResults.sortBy {
